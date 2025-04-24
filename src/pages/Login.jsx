@@ -1,12 +1,12 @@
-import '../styles/login.css';
-import loginImage from '../assets/imgs/f3.jpg';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import React, { useState, useEffect } from 'react';
-import { config } from '../config';
+import "../styles/login.css";
+import loginImage from "../assets/imgs/f3.jpg";
+import { Link, useNavigate, useLocation } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { config } from "../config";
 
 export default function LoginPage() {
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -18,7 +18,7 @@ export default function LoginPage() {
   }, [location.state]);
 
   const togglePassword = () => {
-    setPasswordVisible(prev => !prev);
+    setPasswordVisible((prev) => !prev);
   };
 
   const showToast = (text) => {
@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     const email = e.target.email.value.trim();
     const password = e.target.password.value;
@@ -50,9 +50,9 @@ export default function LoginPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": "Murshid999.GIS.AI333"
+          "x-api-key": "Murshid999.GIS.AI333",
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({ email, password }),
       });
 
       let data = null;
@@ -70,9 +70,10 @@ export default function LoginPage() {
         localStorage.setItem("userEmail", email);
 
         showToast("✅ Logged in successfully!");
-        navigate("/map");
+        navigate("/");
       } else {
-        const message = data?.detail || data?.message || data?.error || "User not found";
+        const message =
+          data?.detail || data?.message || data?.error || "User not found";
         setError(`❌ ${message}`);
       }
     } catch (err) {
@@ -88,9 +89,9 @@ export default function LoginPage() {
         className="background-image"
         style={{
           backgroundImage: `url(${loginImage})`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          position: 'absolute',
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+          position: "absolute",
           inset: 0,
           zIndex: 0,
         }}
@@ -101,24 +102,38 @@ export default function LoginPage() {
           <h2>Log in</h2>
           <form onSubmit={handleSubmit}>
             <div className="input-container">
-              <input type="text" name="email" placeholder="Email address" required />
+              <input
+                type="text"
+                name="email"
+                placeholder="Email address"
+                required
+              />
             </div>
 
             <div className="input-container">
               <input
-                type={passwordVisible ? 'text' : 'password'}
+                type={passwordVisible ? "text" : "password"}
                 name="password"
                 placeholder="Password"
                 required
               />
               <i
-                className={`fas ${passwordVisible ? 'fa-eye-slash' : 'fa-eye'} toggle-password`}
+                className={`fas ${
+                  passwordVisible ? "fa-eye-slash" : "fa-eye"
+                } toggle-password`}
                 onClick={togglePassword}
               ></i>
             </div>
 
             {error && (
-              <p className="error-msg" style={{ color: 'red', marginBottom: '10px', textAlign: 'left' }}>
+              <p
+                className="error-msg"
+                style={{
+                  color: "red",
+                  marginBottom: "10px",
+                  textAlign: "left",
+                }}
+              >
                 {error}
               </p>
             )}
@@ -131,7 +146,10 @@ export default function LoginPage() {
           </Link>
 
           <p className="signup-text">
-            Don’t have an account? <Link to="/signup" className="signup-link">Sign up</Link>
+            Don’t have an account?{" "}
+            <Link to="/signup" className="signup-link">
+              Sign up
+            </Link>
           </p>
         </div>
       </div>

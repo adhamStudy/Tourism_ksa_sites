@@ -4,7 +4,7 @@ import L from "leaflet";
 import { fetchSites, fetchCities } from "./api";
 import { config } from "./config";
 import "leaflet/dist/leaflet.css";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 
 // Map zoom toggle component
 const ZoomToggle = ({ setShowSites }) => {
@@ -26,7 +26,19 @@ const CenterMap = ({ position, zoom }) => {
 
   useEffect(() => {
     if (position) {
-      map.setView(position, zoom || 12);
+      // Add a slight delay to ensure smooth centering
+      const timer = setTimeout(() => {
+        // Use flyTo instead of setView for smoother animation
+        map.flyTo(position, zoom || 12, {
+          animate: true,
+          duration: 1, // 1 second animation
+          easeLinearity: 0.5,
+          // Set padding options to center the marker better
+          padding: [50, 50, 50, 50],
+        });
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
   }, [position, zoom, map]);
 
@@ -34,6 +46,10 @@ const CenterMap = ({ position, zoom }) => {
 };
 
 const ReactLeafletMap = () => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const selectedCityName = location.state?.selectedCity;
+
   const [sites, setSites] = useState([]);
   const [cities, setCities] = useState([]);
   const [events, setEvents] = useState([]);
@@ -42,19 +58,38 @@ const ReactLeafletMap = () => {
   const [showSites, setShowSites] = useState(false);
   const [selectedCity, setSelectedCity] = useState(null);
   const [showProfile, setShowProfile] = useState(false);
-  const navigate = useNavigate();
-  const userEmail = localStorage.getItem("userEmail") || "user@murshid.com";
-
-  // Search related states
   const [searchText, setSearchText] = useState("");
   const [searchResults, setSearchResults] = useState([]);
   const [showSearchResults, setShowSearchResults] = useState(false);
   const [centerPosition, setCenterPosition] = useState(null);
   const [mapZoom, setMapZoom] = useState(5);
-  const searchRef = useRef(null);
-
-  // New state for city not found notification
   const [showNotFoundMessage, setShowNotFoundMessage] = useState(false);
+  const searchRef = useRef(null);
+  const userEmail = localStorage.getItem("userEmail") || "user@murshid.com";
+
+  // Add this useEffect for handling city selection from homepage
+  useEffect(() => {
+    if (!selectedCityName || cities.length === 0 || isLoading) return;
+
+    // Find the city by name
+    const city = cities.find(
+      (city) =>
+        city.properties.name.toLowerCase() === selectedCityName.toLowerCase()
+    );
+
+    if (city) {
+      const coords = city.geometry?.coordinates;
+      if (!coords) return;
+
+      // Small delay to ensure map is fully loaded
+      setTimeout(() => {
+        setCenterPosition([coords[1], coords[0]]);
+        setMapZoom(12);
+        setSelectedCity(city);
+        setSearchText(city.properties.name);
+      }, 500);
+    }
+  }, [selectedCityName, cities, isLoading]);
 
   // Handle outside click for search dropdown
   useEffect(() => {
@@ -128,8 +163,12 @@ const ReactLeafletMap = () => {
     const coords = city.geometry?.coordinates;
     if (!coords) return;
 
-    setCenterPosition([coords[1], coords[0]]);
-    setMapZoom(12);
+    // Ensure coordinates are properly extracted and ordered correctly (Leaflet expects [lat, lng])
+    const centerPoint = [parseFloat(coords[1]), parseFloat(coords[0])];
+
+    // Set these coordinates directly without any manipulation
+    setCenterPosition(centerPoint);
+    setMapZoom(11); // Slightly less zoom to ensure the whole city is visible
     setSelectedCity(city);
     setShowSearchResults(false);
     setSearchText(city.properties.name);
@@ -537,47 +576,58 @@ const ReactLeafletMap = () => {
     }
   }
 
-  .loading-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 100%;
-    background: rgba(255, 255, 255, 0.5);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 2000;
-    backdrop-filter: blur(2px);
-  }
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  width: 100%;
+  background: rgba(255, 255, 255, 0.5); /* شفاف */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  backdrop-filter: blur(2px);
+}
 
-  .spinner-box {
-    background: white;
-    border-radius: 16px;
-    padding: 20px 30px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-    animation: fadeSlideIn 0.6s ease both;
-  }
+.spinner-box {
+  background: white;
+  border-radius: 16px;
+  padding: 20px 30px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: fadeSlideIn 0.6s ease both;
+}
 
-  .circle-spinner {
-    width: 50px;
-    height: 50px;
-    border: 6px solid #e0e0e0;
-    border-top-color: #00b894;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
 
-  .spinner-box p {
-    font-size: 16px;
-    font-weight: 500;
-    color: #333;
-    margin: 0;
-  }
+.circle-spinner {
+  width: 50px;
+  height: 50px;
+  border: 6px solid #e0e0e0;
+  border-top-color: #00b894;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+
+.spinner-box p {
+  font-size: 16px;
+  font-weight: 500;
+  color: #333;
+  margin: 0;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
 
   .search-bar-container {
     position: absolute;
