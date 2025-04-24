@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { fetchSites, fetchCities } from "./api";
@@ -6,6 +6,7 @@ import { config } from "./config";
 import "leaflet/dist/leaflet.css";
 import { useNavigate } from "react-router-dom";
 
+// Map zoom toggle component
 const ZoomToggle = ({ setShowSites }) => {
   const map = useMap();
   useEffect(() => {
@@ -16,6 +17,19 @@ const ZoomToggle = ({ setShowSites }) => {
     handleZoom();
     return () => map.off("zoomend", handleZoom);
   }, [map, setShowSites]);
+  return null;
+};
+
+// New component to center the map on search
+const CenterMap = ({ position, zoom }) => {
+  const map = useMap();
+
+  useEffect(() => {
+    if (position) {
+      map.setView(position, zoom || 12);
+    }
+  }, [position, zoom, map]);
+
   return null;
 };
 
@@ -30,6 +44,61 @@ const ReactLeafletMap = () => {
   const [showProfile, setShowProfile] = useState(false);
   const navigate = useNavigate();
   const userEmail = localStorage.getItem("userEmail") || "user@murshid.com";
+
+  // Search related states
+  const [searchText, setSearchText] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+  const [centerPosition, setCenterPosition] = useState(null);
+  const [mapZoom, setMapZoom] = useState(5);
+  const searchRef = useRef(null);
+
+  // Handle outside click for search dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (searchRef.current && !searchRef.current.contains(event.target)) {
+        setShowSearchResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  // Search function
+  const handleSearch = useCallback(
+    (query) => {
+      setSearchText(query);
+
+      if (!query.trim()) {
+        setSearchResults([]);
+        setShowSearchResults(false);
+        return;
+      }
+
+      const filteredCities = cities.filter((city) =>
+        city.properties.name.toLowerCase().includes(query.toLowerCase())
+      );
+
+      setSearchResults(filteredCities);
+      setShowSearchResults(true);
+    },
+    [cities]
+  );
+
+  // City selection function
+  const handleSelectCity = useCallback((city) => {
+    const coords = city.geometry?.coordinates;
+    if (!coords) return;
+
+    setCenterPosition([coords[1], coords[0]]);
+    setMapZoom(12);
+    setSelectedCity(city);
+    setShowSearchResults(false);
+    setSearchText(city.properties.name);
+  }, []);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -101,7 +170,7 @@ const ReactLeafletMap = () => {
           </ul>
         </div>
 
-        {/* New City Info Card with ❌ */}
+        {/* City Info Card with ❌ */}
         <div className="city-info-card">
           <button className="close-btn" onClick={() => setSelectedCity(null)}>
             ❌
@@ -120,7 +189,7 @@ const ReactLeafletMap = () => {
 
   return (
     <div style={{ position: "relative" }}>
-      {/* ✅ هنا تحطين كل الكومبوننتس */}
+      {/* Loading overlay */}
       {isLoading && (
         <div className="loading-overlay">
           <div className="spinner-box">
@@ -132,14 +201,34 @@ const ReactLeafletMap = () => {
 
       {!selectedCity && (
         <>
-          {/* 🔍 Search */}
-          <div className="search-bar-container">
+          {/* 🔍 Search - Updated with dropdown */}
+          <div className="search-bar-container" ref={searchRef}>
             <input
               type="text"
               placeholder="Search for cities, sites ..."
               className="search-bar"
+              value={searchText}
+              onChange={(e) => handleSearch(e.target.value)}
+              onClick={() =>
+                searchResults.length > 0 && setShowSearchResults(true)
+              }
             />
             <span className="search-icon">🔍</span>
+
+            {/* Search results dropdown */}
+            {showSearchResults && searchResults.length > 0 && (
+              <div className="search-results-dropdown">
+                {searchResults.map((city, index) => (
+                  <div
+                    key={`search-${index}`}
+                    className="search-result-item"
+                    onClick={() => handleSelectCity(city)}
+                  >
+                    <span>{city.properties.name}</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* 🌐 Translate Button */}
@@ -199,6 +288,11 @@ const ReactLeafletMap = () => {
         >
           <ZoomToggle setShowSites={setShowSites} />
           <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+
+          {/* Add the centering component */}
+          {centerPosition && (
+            <CenterMap position={centerPosition} zoom={mapZoom} />
+          )}
 
           {!showSites &&
             cities.map((city, index) => {
@@ -446,7 +540,6 @@ const ReactLeafletMap = () => {
 }
 
 
-
   .search-bar-container {
   position: absolute;
   top: 20px;
@@ -591,9 +684,35 @@ const ReactLeafletMap = () => {
   z-index: 1100;
 }
 
+/* Search results dropdown styles */
+.search-results-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  margin-top: 5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1200;
+}
 
+.search-result-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
 
+.search-result-item:last-child {
+  border-bottom: none;
+}
 
+.search-result-item:hover {
+  background-color: #f5f5f5;
+}
 `}</style>
     </div>
   );
