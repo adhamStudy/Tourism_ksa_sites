@@ -278,7 +278,7 @@ export default function HomePage() {
               title: "Madinah",
               desc: "Experience the spiritual heart of Islam and explore historic sites in Madinah.",
               img: m2,
-              city: "Madinah",
+              city: "Al Madinah",
             },
             {
               title: "AlUla",
