@@ -53,6 +53,9 @@ const ReactLeafletMap = () => {
   const [mapZoom, setMapZoom] = useState(5);
   const searchRef = useRef(null);
 
+  // New state for city not found notification
+  const [showNotFoundMessage, setShowNotFoundMessage] = useState(false);
+
   // Handle outside click for search dropdown
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -67,10 +70,22 @@ const ReactLeafletMap = () => {
     };
   }, []);
 
+  // Auto-dismiss the not found message
+  useEffect(() => {
+    let timer;
+    if (showNotFoundMessage) {
+      timer = setTimeout(() => {
+        setShowNotFoundMessage(false);
+      }, 3000); // Dismiss after 3 seconds
+    }
+    return () => clearTimeout(timer);
+  }, [showNotFoundMessage]);
+
   // Search function
   const handleSearch = useCallback(
     (query) => {
       setSearchText(query);
+      setShowNotFoundMessage(false);
 
       if (!query.trim()) {
         setSearchResults([]);
@@ -87,6 +102,26 @@ const ReactLeafletMap = () => {
     },
     [cities]
   );
+
+  // Search submission handler
+  const handleSearchSubmit = (e) => {
+    e.preventDefault();
+
+    if (!searchText.trim()) return;
+
+    // Check if any cities match the search
+    const matchingCity = cities.find(
+      (city) => city.properties.name.toLowerCase() === searchText.toLowerCase()
+    );
+
+    if (matchingCity) {
+      handleSelectCity(matchingCity);
+    } else {
+      // Show not found message
+      setShowNotFoundMessage(true);
+      setShowSearchResults(false);
+    }
+  };
 
   // City selection function
   const handleSelectCity = useCallback((city) => {
@@ -199,21 +234,40 @@ const ReactLeafletMap = () => {
         </div>
       )}
 
+      {/* City not found notification */}
+      {showNotFoundMessage && (
+        <div className="city-not-found-notification">
+          <div className="notification-content">
+            <div className="notification-icon">🔍</div>
+            <div className="notification-text">
+              <p>"{searchText}" will be available soon!</p>
+              <p className="subtext">
+                We're constantly updating our city database.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!selectedCity && (
         <>
           {/* 🔍 Search - Updated with dropdown */}
           <div className="search-bar-container" ref={searchRef}>
-            <input
-              type="text"
-              placeholder="Search for cities, sites ..."
-              className="search-bar"
-              value={searchText}
-              onChange={(e) => handleSearch(e.target.value)}
-              onClick={() =>
-                searchResults.length > 0 && setShowSearchResults(true)
-              }
-            />
-            <span className="search-icon">🔍</span>
+            <form onSubmit={handleSearchSubmit}>
+              <input
+                type="text"
+                placeholder="Search for cities, sites ..."
+                className="search-bar"
+                value={searchText}
+                onChange={(e) => handleSearch(e.target.value)}
+                onClick={() =>
+                  searchResults.length > 0 && setShowSearchResults(true)
+                }
+              />
+              <button type="submit" className="search-icon">
+                🔍
+              </button>
+            </form>
 
             {/* Search results dropdown */}
             {showSearchResults && searchResults.length > 0 && (
@@ -372,24 +426,23 @@ const ReactLeafletMap = () => {
   }
 
   .city-info-card {
-  position: absolute;
-  bottom: 20px;
-  left: 13%;
-  transform: translateX(-20%);
-  background: white;
-  border-radius: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 10px 20px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-  width: 900px;
- min-height: 180px;
-  z-index: 1000;
-  animation: fadeSlideIn 0.6s ease both;
-  gap: 20px;
-}
-
+    position: absolute;
+    bottom: 20px;
+    left: 13%;
+    transform: translateX(-20%);
+    background: white;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    width: 900px;
+    min-height: 180px;
+    z-index: 1000;
+    animation: fadeSlideIn 0.6s ease both;
+    gap: 20px;
+  }
 
   .city-text {
     flex: 1.5;
@@ -414,12 +467,11 @@ const ReactLeafletMap = () => {
   }
 
   .city-image img {
-  width: 220px;
-  height: 190px;
-  border-radius: 20px;
-  object-fit: cover;
-}
-
+    width: 220px;
+    height: 190px;
+    border-radius: 20px;
+    object-fit: cover;
+  }
 
   .close-btn {
     position: absolute;
@@ -440,8 +492,6 @@ const ReactLeafletMap = () => {
     margin-bottom: 8px;
     font-size: 13px;
   }
-
- 
 
   .spinner {
     border: 4px solid #eee;
@@ -487,232 +537,295 @@ const ReactLeafletMap = () => {
     }
   }
 
-.loading-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  height: 100%;
-  width: 100%;
-  background: rgba(255, 255, 255, 0.5); /* شفاف */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-  backdrop-filter: blur(2px);
-}
+  .loading-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 100%;
+    background: rgba(255, 255, 255, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    backdrop-filter: blur(2px);
+  }
 
-.spinner-box {
-  background: white;
-  border-radius: 16px;
-  padding: 20px 30px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  animation: fadeSlideIn 0.6s ease both;
-}
+  .spinner-box {
+    background: white;
+    border-radius: 16px;
+    padding: 20px 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: fadeSlideIn 0.6s ease both;
+  }
 
+  .circle-spinner {
+    width: 50px;
+    height: 50px;
+    border: 6px solid #e0e0e0;
+    border-top-color: #00b894;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
 
-.circle-spinner {
-  width: 50px;
-  height: 50px;
-  border: 6px solid #e0e0e0;
-  border-top-color: #00b894;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-
-.spinner-box p {
-  font-size: 16px;
-  font-weight: 500;
-  color: #333;
-  margin: 0;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
+  .spinner-box p {
+    font-size: 16px;
+    font-weight: 500;
+    color: #333;
+    margin: 0;
+  }
 
   .search-bar-container {
-  position: absolute;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: white;
-  border-radius: 30px;
-  padding: 6px 14px;
-  display: flex;
-  align-items: center;
-  width: 340px;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-  z-index: 1100;
-}
-.search-bar {
-  flex: 1;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  background: transparent;
-}
-.search-icon {
-  font-size: 18px;
-  color: #666;
-}
-
-.translate-button {
-  position: absolute;
-  top: 20px;
-  left: 100px;
-  width: 40px;
-  height: 40px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  backdrop-filter: blur(6px);
-}
-.translate-button img {
-  width: 22px;
-  height: 22px;
-}
-
-.back-btn {
-  position: absolute;
-  top: 20px;
-  left: 50px;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 50%;
-  width: 42px;
-  height: 42px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  cursor: pointer;
-  transition: all 0.2s ease-in-out;
-  z-index: 1100;
-}
-.back-btn:hover {
-  background-color: #f0f0f0;
-  transform: scale(1.05);
-}
-
-.user-profile-container {
-  position: absolute;
-  top: 20px;
-  right: 20px;
-  z-index: 1100;
-}
-
-.user-info-card {
     position: absolute;
-  top: 70px;
-  right: 20px;
-  background: white;
-  border-radius: 12px;
-  padding: 12px 16px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-  z-index: 1100;
-  width: 200px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: white;
+    border-radius: 30px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    width: 340px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    z-index: 1100;
+  }
+  
+  .search-bar-container form {
+    display: flex;
+    width: 100%;
+    align-items: center;
+  }
+  
+  .search-bar {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 14px;
+    background: transparent;
+    padding: 8px 0;
+  }
+  
+  .search-icon {
+    font-size: 18px;
+    color: #666;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+  }
 
-.user-info-card h4 {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  color: #333;
-}
+  .translate-button {
+    position: absolute;
+    top: 20px;
+    left: 100px;
+    width: 40px;
+    height: 40px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1100;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    backdrop-filter: blur(6px);
+  }
+  
+  .translate-button img {
+    width: 22px;
+    height: 22px;
+  }
 
-.user-info-card button {
-  background-color: #f44336;
-  color: white;
-  border: none;
-  padding: 6px 12px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background-color 0.2s ease-in-out;
-}
+  .back-btn {
+    position: absolute;
+    top: 20px;
+    left: 50px;
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 50%;
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    z-index: 1100;
+  }
+  
+  .back-btn:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+  }
 
-.user-info-card button:hover {
-  background-color: #d32f2f;
-}
+  .user-profile-container {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 1100;
+  }
 
-.user-avatar {
-  background: rgba(255, 255, 255, 0.9);
-  width: 45px;
-  height: 45px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  border: 2px solid #00b894;
-  font-size: 22px;
-  cursor: pointer;
-  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-  backdrop-filter: blur(6px);
-  transition: transform 0.2s ease-in-out;
-}
-.user-avatar:hover {
-  transform: scale(1.05);
-}
-.translate-button:hover {
-  background-color: #f0f0f0;
-  transform: scale(1.05);
-}
-.top-buttons-container {
-  position: absolute;
-  top: 20px;
-  left: 20px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  z-index: 1100;
-}
+  .user-info-card {
+    position: absolute;
+    top: 70px;
+    right: 20px;
+    background: white;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+    z-index: 1100;
+    width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
 
-/* Search results dropdown styles */
-.search-results-dropdown {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background: white;
-  border-radius: 12px;
-  margin-top: 5px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  max-height: 300px;
-  overflow-y: auto;
-  z-index: 1200;
-}
+  .user-info-card h4 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+    color: #333;
+  }
 
-.search-result-item {
-  padding: 10px 14px;
-  border-bottom: 1px solid #eee;
-  cursor: pointer;
-  transition: background-color 0.2s ease;
-}
+  .user-info-card button {
+    background-color: #f44336;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+  }
 
-.search-result-item:last-child {
-  border-bottom: none;
-}
+  .user-info-card button:hover {
+    background-color: #d32f2f;
+  }
 
-.search-result-item:hover {
-  background-color: #f5f5f5;
-}
+  .user-avatar {
+    background: rgba(255, 255, 255, 0.9);
+    width: 45px;
+    height: 45px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    border: 2px solid #00b894;
+    font-size: 22px;
+    cursor: pointer;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+    backdrop-filter: blur(6px);
+    transition: transform 0.2s ease-in-out;
+  }
+  
+  .user-avatar:hover {
+    transform: scale(1.05);
+  }
+  
+  .translate-button:hover {
+    background-color: #f0f0f0;
+    transform: scale(1.05);
+  }
+  
+  .top-buttons-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    z-index: 1100;
+  }
+
+  /* Search results dropdown styles */
+  .search-results-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border-radius: 12px;
+    margin-top: 5px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 1200;
+  }
+
+  .search-result-item {
+    padding: 10px 14px;
+    border-bottom: 1px solid #eee;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+  }
+
+  .search-result-item:last-child {
+    border-bottom: none;
+  }
+
+  .search-result-item:hover {
+    background-color: #f5f5f5;
+  }
+  
+  /* City not found notification */
+  .city-not-found-notification {
+    position: fixed;
+    top: 80px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.97);
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    padding: 16px;
+    z-index: 2000;
+    animation: slideDown 0.4s ease forwards, fadeOut 0.5s ease 2.5s forwards;
+    min-width: 300px;
+    border-left: 4px solid #3498db;
+  }
+  
+  .notification-content {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+  }
+  
+  .notification-icon {
+    font-size: 24px;
+    background: #e0f7fa;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #0288d1;
+  }
+  
+  .notification-text p {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 500;
+    color: #333;
+  }
+  
+  .notification-text .subtext {
+    font-size: 13px;
+    color: #777;
+    margin-top: 4px;
+  }
+  
+  @keyframes slideDown {
+    from { transform: translate(-50%, -20px); opacity: 0; }
+    to { transform: translate(-50%, 0); opacity: 1; }
+  }
+  
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; visibility: hidden; }
+  }
 `}</style>
     </div>
   );
