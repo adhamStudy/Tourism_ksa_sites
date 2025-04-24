@@ -24,18 +24,32 @@ export default function HomePage() {
   const [changingText, setChangingText] = useState(
     "Discover Saudi Arabia's Cultural Treasures"
   );
+  const [isLoggedIn, setIsLoggedIn] = useState(false); // Track login state
 
   // Function to check if user is logged in
-  const isUserLoggedIn = () => {
-    // Check if token exists in localStorage
+  const checkUserLoggedIn = () => {
     const token =
       localStorage.getItem("token") || localStorage.getItem("userEmail");
     return !!token;
   };
 
+  // Check login status on component mount and set state
+  useEffect(() => {
+    setIsLoggedIn(checkUserLoggedIn());
+  }, []);
+
+  // Function to handle logout
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("userEmail");
+    setIsLoggedIn(false);
+    // Optional: refresh the page or show a logout notification
+    window.location.reload();
+  };
+
   // Function to handle navigation to map
   const navigateToMap = (cityName = null) => {
-    if (isUserLoggedIn()) {
+    if (isLoggedIn) {
       if (cityName) {
         // Navigate to map with city parameter
         navigate("/map", { state: { selectedCity: cityName } });
@@ -167,14 +181,20 @@ export default function HomePage() {
               />
             </a>
           </div>
+
+          {/* Dynamic login/logout button */}
           <div
             className="icon-circle"
-            onClick={() => navigate("/login")}
-            title="تسجيل الدخول"
+            onClick={isLoggedIn ? handleLogout : () => navigate("/login")}
+            title={isLoggedIn ? "Sign Out" : "Sign In"}
           >
             <img
-              src="https://cdn-icons-png.flaticon.com/512/747/747376.png"
-              alt="تسجيل الدخول"
+              src={
+                isLoggedIn
+                  ? "https://cdn-icons-png.flaticon.com/512/1828/1828490.png"
+                  : "https://cdn-icons-png.flaticon.com/512/747/747376.png"
+              }
+              alt={isLoggedIn ? "Sign Out" : "Sign In"}
             />
           </div>
 
@@ -278,7 +298,7 @@ export default function HomePage() {
               title: "Madinah",
               desc: "Experience the spiritual heart of Islam and explore historic sites in Madinah.",
               img: m2,
-              city: "Al Madinah",
+              city: "Al Madinah", // Updated to match database name
             },
             {
               title: "AlUla",
