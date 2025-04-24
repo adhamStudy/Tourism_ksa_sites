@@ -1,0 +1,146 @@
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  background-color:  #f9f9f9;
+}
+
+.reset-wrapper {
+  height: 100vh;
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+  position: relative;
+}
+
+
+.reset-wrapper .container {
+  position: relative;
+  z-index: 2;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.reset-wrapper .login-box {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  padding: 40px;
+  border-radius: 15px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  width: 90%;
+  max-width: 420px;
+  text-align: center;
+  color: white;
+}
+
+.reset-wrapper .login-box h2 {
+  margin-bottom: 25px;
+  font-size: 26px;
+  font-weight: 700;
+  color: white;
+}
+
+.input-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.input-field {
+  width: 100%;
+  padding-right: 38px;
+  padding-left: 12px;
+  height: 44px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  font-size: 15px;
+  background-color: rgba(255, 255, 255, 0.25);
+  border: none;
+  color: #fff;
+}
+
+.input-field::placeholder {
+  color: #eee;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 12px;
+  top: 39%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: white !important;
+  font-size: 18px;
+}
+
+.reset-wrapper .overlay {
+  display: none !important;
+}
+
+
+.reset-wrapper .error-msg {
+  color: #ffcccc;
+  font-size: 13px;
+  height: 18px;
+  margin-top: -5px;     /* ⬅️ تضيف مسافة فوق */
+  margin-bottom: 25px; 
+}
+
+
+.reset-wrapper button  {
+  width: 100%;
+  padding: 12px;
+  background-color: #004b3f;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: -20px; 
+  transition: 0.3s ease;
+}
+
+button:hover {
+  background-color: #006b55;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #00b894;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 9999;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+/* إخفاء الأيقونات السوداء الافتراضية من المتصفح */
+input::-ms-reveal,
+input::-webkit-contacts-auto-fill-button,
+input::-webkit-credentials-auto-fill-button {
+  display: none !important;
+}

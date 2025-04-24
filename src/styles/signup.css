@@ -1,0 +1,136 @@
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Poppins', sans-serif;
+}
+
+.page-wrapper {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.background-image {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+  z-index: 0;
+}
+
+
+
+.container {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+.login-box {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  padding: 40px 50px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  width: 420px;
+  text-align: center;
+  color: white;
+}
+
+.login-box h2 {
+  margin-bottom: 30px;
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+}
+
+.input-container {
+  position: relative;
+  margin-bottom: 12px;
+}
+
+.input-container input {
+  width: 100%;
+  padding: 14px 45px 14px 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.input-container input::placeholder {
+  color: #ddd;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 14px;
+  top: 39%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #eee;
+  font-size: 18px;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  background-color: #004b3f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+button:hover {
+  background-color: #006b55;
+}
+
+.signup-text {
+  font-size: 14px;
+  color: #d0f6e8;
+  margin-top: 15px;
+}
+
+.signup-link {
+  color: #d0f6e8;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
+
+.error-msg {
+  color: #ffb3b3;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: left;
+}
+.success-message {
+  color: #b9fcb4;
+  font-size: 13px;
+  margin-bottom: 10px;
+  text-align: left;
+}

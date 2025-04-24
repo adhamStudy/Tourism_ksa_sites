@@ -1,0 +1,151 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  height: 100%;
+  font-family: 'Poppins', sans-serif;
+}
+
+.page-wrapper {
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  z-index: 0;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.6); 
+  z-index: 1;
+}
+
+
+.container {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-box {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
+  padding: 40px 50px;
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  width: 420px; 
+  text-align: center;
+  color: white;
+}
+
+.login-box h2 {
+  margin-bottom: 25px;
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+}
+
+
+
+.login-box input {
+  width: 100%;
+  padding: 14px 45px 14px 15px;
+  border: none;
+  border-radius: 8px;
+  font-size: 15px;
+  background-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.login-box .input-container {
+  position: relative;
+  margin-bottom: 12px; 
+}
+
+
+.login-box input::placeholder {
+  color: #ddd;
+}
+
+.toggle-password {
+  position: absolute;
+  right: 14px;
+  top: 39%; /* نزّلناها شوي بدل 50% */
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #eee;
+  font-size: 18px;
+}
+
+.login-box button {
+  width: 100%;
+  padding: 14px;
+  background-color: #004b3f;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.login-box button:hover {
+  background-color: #006b55;
+}
+
+.forgot-link {
+  display: block;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #d0f6e8;
+  text-decoration: none;
+}
+
+.forgot-link:hover {
+  text-decoration: underline;
+}
+
+.signup-text {
+  font-size: 14px;
+  color: #d0f6e8;
+  margin-top: 12px;
+}
+
+.signup-link {
+  color: #d0f6e8;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.signup-link:hover {
+  text-decoration: underline;
+}
+
+.toast {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background-color: #00b894;
+  color: white;
+  padding: 12px 20px;
+  border-radius: 6px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+  font-size: 14px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 9999;
+}
+.toast.show {
+  opacity: 1;
+}
