@@ -20,7 +20,7 @@ const ZoomToggle = ({ setShowSites }) => {
   return null;
 };
 
-// New component to center the map on search
+// Component to center the map on search
 const CenterMap = ({ position, zoom }) => {
   const map = useMap();
 
@@ -67,17 +67,38 @@ const ReactLeafletMap = () => {
   const searchRef = useRef(null);
   const userEmail = localStorage.getItem("userEmail") || "user@murshid.com";
 
+  // Add this state for the selected site
+  const [selectedSite, setSelectedSite] = useState(null);
+
   // Add this useEffect for handling city selection from homepage
   useEffect(() => {
     if (!selectedCityName || cities.length === 0 || isLoading) return;
 
-    // Find the city by name
-    const city = cities.find(
-      (city) =>
-        city.properties.name.toLowerCase() === selectedCityName.toLowerCase()
-    );
+    // Make the matching case-insensitive and handle potential name variations
+    const normalizedSearchName = selectedCityName.toLowerCase().trim();
+
+    // Try different name variations
+    const possibleNames = [
+      normalizedSearchName,
+      normalizedSearchName === "madinah" ? "medina" : normalizedSearchName,
+      normalizedSearchName === "medina" ? "madinah" : normalizedSearchName,
+      normalizedSearchName === "alula" ? "al ula" : normalizedSearchName,
+      normalizedSearchName === "al ula" ? "alula" : normalizedSearchName,
+      normalizedSearchName === "madinah" ? "al madinah" : normalizedSearchName,
+      normalizedSearchName === "al madinah" ? "madinah" : normalizedSearchName,
+    ];
+
+    // Find city with any of the possible name variations
+    const city = cities.find((city) => {
+      const cityName = city.properties.name.toLowerCase().trim();
+      return possibleNames.includes(cityName);
+    });
 
     if (city) {
+      console.log(
+        `Found city match for ${selectedCityName}:`,
+        city.properties.name
+      );
       const coords = city.geometry?.coordinates;
       if (!coords) return;
 
@@ -88,6 +109,11 @@ const ReactLeafletMap = () => {
         setSelectedCity(city);
         setSearchText(city.properties.name);
       }, 500);
+    } else {
+      console.log(
+        `No city match found for ${selectedCityName}. Available cities:`,
+        cities.map((c) => c.properties.name)
+      );
     }
   }, [selectedCityName, cities, isLoading]);
 
@@ -116,7 +142,7 @@ const ReactLeafletMap = () => {
     return () => clearTimeout(timer);
   }, [showNotFoundMessage]);
 
-  // Search function
+  // Enhanced search function for cities and sites
   const handleSearch = useCallback(
     (query) => {
       setSearchText(query);
@@ -128,35 +154,126 @@ const ReactLeafletMap = () => {
         return;
       }
 
+      const normalizedQuery = query.toLowerCase().trim();
+
+      // Search in cities
       const filteredCities = cities.filter((city) =>
-        city.properties.name.toLowerCase().includes(query.toLowerCase())
+        city.properties.name.toLowerCase().includes(normalizedQuery)
       );
 
-      setSearchResults(filteredCities);
-      setShowSearchResults(true);
+      // Search in sites
+      const filteredSites = sites.filter(
+        (site) =>
+          site.properties.name &&
+          site.properties.name.toLowerCase().includes(normalizedQuery)
+      );
+
+      // Combine results with type identifier
+      const combinedResults = [
+        ...filteredCities.map((city) => ({
+          type: "city",
+          name: city.properties.name,
+          data: city,
+        })),
+        ...filteredSites.map((site) => ({
+          type: "site",
+          name: site.properties.name,
+          data: site,
+        })),
+      ];
+
+      setSearchResults(combinedResults);
+      setShowSearchResults(combinedResults.length > 0);
     },
-    [cities]
+    [cities, sites]
   );
 
-  // Search submission handler
+  // Enhanced search submission handler
   const handleSearchSubmit = (e) => {
     e.preventDefault();
 
     if (!searchText.trim()) return;
 
-    // Check if any cities match the search
+    const normalizedQuery = searchText.toLowerCase().trim();
+
+    // First try to find exact match in cities
     const matchingCity = cities.find(
-      (city) => city.properties.name.toLowerCase() === searchText.toLowerCase()
+      (city) => city.properties.name.toLowerCase() === normalizedQuery
     );
 
     if (matchingCity) {
       handleSelectCity(matchingCity);
-    } else {
-      // Show not found message
-      setShowNotFoundMessage(true);
-      setShowSearchResults(false);
+      return;
     }
+
+    // Then try to find exact match in sites
+    const matchingSite = sites.find(
+      (site) =>
+        site.properties.name &&
+        site.properties.name.toLowerCase() === normalizedQuery
+    );
+
+    if (matchingSite) {
+      handleSelectSite(matchingSite);
+      return;
+    }
+
+    // If no exact match, try partial matches
+    const partialMatchCity = cities.find((city) =>
+      city.properties.name.toLowerCase().includes(normalizedQuery)
+    );
+
+    if (partialMatchCity) {
+      handleSelectCity(partialMatchCity);
+      return;
+    }
+
+    const partialMatchSite = sites.find(
+      (site) =>
+        site.properties.name &&
+        site.properties.name.toLowerCase().includes(normalizedQuery)
+    );
+
+    if (partialMatchSite) {
+      handleSelectSite(partialMatchSite);
+      return;
+    }
+
+    // If nothing found, show not found message
+    setShowNotFoundMessage(true);
+    setShowSearchResults(false);
   };
+
+  // Function to handle site selection
+  const handleSelectSite = useCallback(
+    (site) => {
+      const coords = site.geometry?.coordinates;
+      if (!coords) return;
+
+      // Ensure coordinates are properly extracted and ordered correctly (Leaflet expects [lat, lng])
+      const centerPoint = [parseFloat(coords[1]), parseFloat(coords[0])];
+
+      // Set these coordinates directly
+      setCenterPosition(centerPoint);
+      setMapZoom(15); // Higher zoom for sites
+      setSelectedSite(site);
+      setShowSearchResults(false);
+      setSearchText(site.properties.name);
+
+      // Find the city that contains this site (optional)
+      const containingCity = cities.find((city) => {
+        if (!city.properties.id || !site.properties.city_id) return false;
+        return city.properties.id === site.properties.city_id;
+      });
+
+      if (containingCity) {
+        setSelectedCity(containingCity);
+      } else {
+        setSelectedCity(null);
+      }
+    },
+    [cities]
+  );
 
   // City selection function
   const handleSelectCity = useCallback((city) => {
@@ -172,6 +289,7 @@ const ReactLeafletMap = () => {
     setSelectedCity(city);
     setShowSearchResults(false);
     setSearchText(city.properties.name);
+    setSelectedSite(null); // Reset any selected site
   }, []);
 
   useEffect(() => {
@@ -194,6 +312,12 @@ const ReactLeafletMap = () => {
         setTours((await toursRes.json()).features || []);
         setSites(sitesData);
         setCities(citiesData.features || []);
+
+        // Log all city names for debugging
+        console.log(
+          "Available cities in database:",
+          (citiesData.features || []).map((city) => city.properties.name)
+        );
 
         setIsLoading(false);
       } catch (err) {
@@ -218,13 +342,17 @@ const ReactLeafletMap = () => {
         <div className="popup-card left">
           <h3>🧭 Tours</h3>
           <ul>
-            {relatedTours.map((tour, i) => (
-              <li key={i}>
-                <strong>{tour.properties.title}</strong>
-                <br />
-                <span>{tour.properties.tour_schedule}</span>
-              </li>
-            ))}
+            {relatedTours.length > 0 ? (
+              relatedTours.map((tour, i) => (
+                <li key={i}>
+                  <strong>{tour.properties.title}</strong>
+                  <br />
+                  <span>{tour.properties.tour_schedule}</span>
+                </li>
+              ))
+            ) : (
+              <li>No tours available for this city</li>
+            )}
           </ul>
         </div>
 
@@ -232,15 +360,19 @@ const ReactLeafletMap = () => {
         <div className="popup-card right">
           <h3>📅 Events</h3>
           <ul>
-            {relatedEvents.map((event, i) => (
-              <li key={i}>
-                <strong>{event.properties.title}</strong>
-                <br />
-                <span>
-                  {event.properties.start_date} to {event.properties.end_date}
-                </span>
-              </li>
-            ))}
+            {relatedEvents.length > 0 ? (
+              relatedEvents.map((event, i) => (
+                <li key={i}>
+                  <strong>{event.properties.title}</strong>
+                  <br />
+                  <span>
+                    {event.properties.start_date} to {event.properties.end_date}
+                  </span>
+                </li>
+              ))
+            ) : (
+              <li>No events available for this city</li>
+            )}
           </ul>
         </div>
 
@@ -280,9 +412,7 @@ const ReactLeafletMap = () => {
             <div className="notification-icon">🔍</div>
             <div className="notification-text">
               <p>"{searchText}" will be available soon!</p>
-              <p className="subtext">
-                We're constantly updating our city database.
-              </p>
+              <p className="subtext">We're constantly updating our database.</p>
             </div>
           </div>
         </div>
@@ -290,7 +420,7 @@ const ReactLeafletMap = () => {
 
       {!selectedCity && (
         <>
-          {/* 🔍 Search - Updated with dropdown */}
+          {/* 🔍 Search - Enhanced with city and site results */}
           <div className="search-bar-container" ref={searchRef}>
             <form onSubmit={handleSearchSubmit}>
               <input
@@ -308,16 +438,28 @@ const ReactLeafletMap = () => {
               </button>
             </form>
 
-            {/* Search results dropdown */}
+            {/* Enhanced search results dropdown */}
             {showSearchResults && searchResults.length > 0 && (
               <div className="search-results-dropdown">
-                {searchResults.map((city, index) => (
+                {searchResults.map((result, index) => (
                   <div
                     key={`search-${index}`}
                     className="search-result-item"
-                    onClick={() => handleSelectCity(city)}
+                    onClick={() => {
+                      if (result.type === "city") {
+                        handleSelectCity(result.data);
+                      } else {
+                        handleSelectSite(result.data);
+                      }
+                    }}
                   >
-                    <span>{city.properties.name}</span>
+                    <span className="result-icon">
+                      {result.type === "city" ? "🏙️" : "📍"}
+                    </span>
+                    <span>{result.name}</span>
+                    <span className="result-type">
+                      {result.type === "city" ? "City" : "Site"}
+                    </span>
                   </div>
                 ))}
               </div>
@@ -387,6 +529,7 @@ const ReactLeafletMap = () => {
             <CenterMap position={centerPosition} zoom={mapZoom} />
           )}
 
+          {/* City markers */}
           {!showSites &&
             cities.map((city, index) => {
               const coords = city.geometry?.coordinates;
@@ -408,12 +551,17 @@ const ReactLeafletMap = () => {
               );
             })}
 
-          {showSites &&
+          {/* Enhanced site markers - updated to highlight selected site */}
+          {(showSites || selectedSite) &&
             sites.map((site, index) => {
               const coords = site.geometry?.coordinates;
               const props = site.properties;
               const iconUrl = props.category_marker_icon;
               if (!coords || !iconUrl) return null;
+
+              const isSelectedSite =
+                selectedSite && selectedSite.properties.id === props.id;
+              const iconSize = isSelectedSite ? [65, 65] : [50, 50];
 
               return (
                 <Marker
@@ -421,14 +569,33 @@ const ReactLeafletMap = () => {
                   position={[coords[1], coords[0]]}
                   icon={L.icon({
                     iconUrl,
-                    iconSize: [50, 50],
-                    iconAnchor: [25, 50],
-                    popupAnchor: [0, -50],
+                    iconSize,
+                    iconAnchor: [iconSize[0] / 2, iconSize[1]],
+                    popupAnchor: [0, -iconSize[1]],
                   })}
+                  eventHandlers={{
+                    click: () => {
+                      // Only set selectedSite if it's not already selected
+                      if (!isSelectedSite) {
+                        setSelectedSite(site);
+                      }
+                    },
+                  }}
                 >
                   <Popup maxWidth={300}>
                     <h3>{props.name}</h3>
                     <p>{props.description}</p>
+                    {props.image_url && (
+                      <img
+                        src={props.image_url}
+                        alt={props.name}
+                        style={{
+                          width: "100%",
+                          borderRadius: "8px",
+                          marginTop: "8px",
+                        }}
+                      />
+                    )}
                   </Popup>
                 </Marker>
               );
@@ -582,7 +749,7 @@ const ReactLeafletMap = () => {
   left: 0;
   height: 100%;
   width: 100%;
-  background: rgba(255, 255, 255, 0.5); /* شفاف */
+  background: rgba(255, 255, 255, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -602,7 +769,6 @@ const ReactLeafletMap = () => {
   animation: fadeSlideIn 0.6s ease both;
 }
 
-
 .circle-spinner {
   width: 50px;
   height: 50px;
@@ -616,7 +782,6 @@ const ReactLeafletMap = () => {
   to { transform: rotate(360deg); }
 }
 
-
 .spinner-box p {
   font-size: 16px;
   font-weight: 500;
@@ -628,255 +793,279 @@ const ReactLeafletMap = () => {
   to { transform: rotate(360deg); }
 }
 
+.search-bar-container {
+  position: absolute;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: white;
+  border-radius: 30px;
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  width: 340px;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+  z-index: 1100;
+}
 
-  .search-bar-container {
-    position: absolute;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: white;
-    border-radius: 30px;
-    padding: 6px 14px;
-    display: flex;
-    align-items: center;
-    width: 340px;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-    z-index: 1100;
-  }
-  
-  .search-bar-container form {
-    display: flex;
-    width: 100%;
-    align-items: center;
-  }
-  
-  .search-bar {
-    flex: 1;
-    border: none;
-    outline: none;
-    font-size: 14px;
-    background: transparent;
-    padding: 8px 0;
-  }
-  
-  .search-icon {
-    font-size: 18px;
-    color: #666;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-  }
+.search-bar-container form {
+  display: flex;
+  width: 100%;
+  align-items: center;
+}
 
-  .translate-button {
-    position: absolute;
-    top: 20px;
-    left: 100px;
-    width: 40px;
-    height: 40px;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 1100;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    backdrop-filter: blur(6px);
-  }
-  
-  .translate-button img {
-    width: 22px;
-    height: 22px;
-  }
+.search-bar {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  background: transparent;
+  padding: 8px 0;
+}
 
-  .back-btn {
-    position: absolute;
-    top: 20px;
-    left: 50px;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 50%;
-    width: 42px;
-    height: 42px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-    z-index: 1100;
-  }
-  
-  .back-btn:hover {
-    background-color: #f0f0f0;
-    transform: scale(1.05);
-  }
+.search-icon {
+  font-size: 18px;
+  color: #666;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+}
 
-  .user-profile-container {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    z-index: 1100;
-  }
+.translate-button {
+  position: absolute;
+  top: 20px;
+  left: 100px;
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  backdrop-filter: blur(6px);
+}
 
-  .user-info-card {
-    position: absolute;
-    top: 70px;
-    right: 20px;
-    background: white;
-    border-radius: 12px;
-    padding: 12px 16px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-    z-index: 1100;
-    width: 200px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
+.translate-button img {
+  width: 22px;
+  height: 22px;
+}
 
-  .user-info-card h4 {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 600;
-    color: #333;
-  }
+.back-btn {
+  position: absolute;
+  top: 20px;
+  left: 50px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 50%;
+  width: 42px;
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  z-index: 1100;
+}
 
-  .user-info-card button {
-    background-color: #f44336;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 8px;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.2s ease-in-out;
-  }
+.back-btn:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.05);
+}
 
-  .user-info-card button:hover {
-    background-color: #d32f2f;
-  }
+.user-profile-container {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  z-index: 1100;
+}
 
-  .user-avatar {
-    background: rgba(255, 255, 255, 0.9);
-    width: 45px;
-    height: 45px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    border: 2px solid #00b894;
-    font-size: 22px;
-    cursor: pointer;
-    box-shadow: 0 4px 10px rgba(0,0,0,0.15);
-    backdrop-filter: blur(6px);
-    transition: transform 0.2s ease-in-out;
-  }
-  
-  .user-avatar:hover {
-    transform: scale(1.05);
-  }
-  
-  .translate-button:hover {
-    background-color: #f0f0f0;
-    transform: scale(1.05);
-  }
-  
-  .top-buttons-container {
-    position: absolute;
-    top: 20px;
-    left: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    z-index: 1100;
-  }
+.user-info-card {
+  position: absolute;
+  top: 70px;
+  right: 20px;
+  background: white;
+  border-radius: 12px;
+  padding: 12px 16px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+  z-index: 1100;
+  width: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-  /* Search results dropdown styles */
-  .search-results-dropdown {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border-radius: 12px;
-    margin-top: 5px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    max-height: 300px;
-    overflow-y: auto;
-    z-index: 1200;
-  }
+.user-info-card h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
 
-  .search-result-item {
-    padding: 10px 14px;
-    border-bottom: 1px solid #eee;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-  }
+.user-info-card button {
+  background-color: #f44336;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease-in-out;
+}
 
-  .search-result-item:last-child {
-    border-bottom: none;
-  }
+.user-info-card button:hover {
+  background-color: #d32f2f;
+}
 
-  .search-result-item:hover {
-    background-color: #f5f5f5;
-  }
-  
-  /* City not found notification */
-  .city-not-found-notification {
-    position: fixed;
-    top: 80px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: rgba(255, 255, 255, 0.97);
-    border-radius: 12px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
-    padding: 16px;
-    z-index: 2000;
-    animation: slideDown 0.4s ease forwards, fadeOut 0.5s ease 2.5s forwards;
-    min-width: 300px;
-    border-left: 4px solid #3498db;
-  }
-  
-  .notification-content {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-  }
-  
-  .notification-icon {
-    font-size: 24px;
-    background: #e0f7fa;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #0288d1;
-  }
-  
-  .notification-text p {
-    margin: 0;
-    font-size: 15px;
-    font-weight: 500;
-    color: #333;
-  }
-  
-  .notification-text .subtext {
-    font-size: 13px;
-    color: #777;
-    margin-top: 4px;
-  }
-  
-  @keyframes slideDown {
-    from { transform: translate(-50%, -20px); opacity: 0; }
-    to { transform: translate(-50%, 0); opacity: 1; }
-  }
-  
-  @keyframes fadeOut {
-    from { opacity: 1; }
-    to { opacity: 0; visibility: hidden; }
-  }
-`}</style>
+.user-avatar {
+  background: rgba(255, 255, 255, 0.9);
+  width: 45px;
+  height: 45px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 2px solid #00b894;
+  font-size: 22px;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+  backdrop-filter: blur(6px);
+  transition: transform 0.2s ease-in-out;
+}
+
+.user-avatar:hover {
+  transform: scale(1.05);
+}
+
+.translate-button:hover {
+  background-color: #f0f0f0;
+  transform: scale(1.05);
+}
+
+.top-buttons-container {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 1100;
+}
+
+/* Enhanced search results dropdown styles */
+.search-results-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border-radius: 12px;
+  margin-top: 5px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1200;
+}
+
+.search-result-item {
+  padding: 10px 14px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: flex;
+  align-items: center;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background-color: #f5f5f5;
+}
+
+.result-icon {
+  margin-right: 10px;
+  font-size: 18px;
+}
+
+.result-type {
+  margin-left: auto;
+  font-size: 12px;
+  color: #777;
+  background: #f0f0f0;
+  padding: 3px 6px;
+  border-radius: 4px;
+}
+
+/* City not found notification */
+.city-not-found-notification {
+  position: fixed;
+  top: 80px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.97);
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+  padding: 16px;
+  z-index: 2000;
+  animation: slideDown 0.4s ease forwards, fadeOut 0.5s ease 2.5s forwards;
+  min-width: 300px;
+  border-left: 4px solid #3498db;
+}
+
+.notification-content {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.notification-icon {
+  font-size: 24px;
+  background: #e0f7fa;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #0288d1;
+}
+
+.notification-text p {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 500;
+  color: #333;
+}
+
+.notification-text .subtext {
+  font-size: 13px;
+  color: #777;
+  margin-top: 4px;
+}
+
+/* Site popup styles */
+.site-popup-image {
+  width: 100%;
+  max-height: 150px;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-top: 10px;
+}
+
+@keyframes slideDown {
+  from { transform: translate(-50%, -20px); opacity: 0; }
+  to { transform: translate(-50%, 0); opacity: 1; }
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to { opacity: 0; visibility: hidden; }
+}
+      `}</style>
     </div>
   );
 };
